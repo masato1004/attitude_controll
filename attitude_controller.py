@@ -1,19 +1,16 @@
 import numpy as np
 
 class AttitudeController:
-    def __init__(self, plate_length=0.05, plate_width=0.05, plate_thickness=0.005):
+    CENTROID_DISTANCE = 0.02  # distance from the vertex to the centroid
+    ARM_LENGTH = 0.017
+    def __init__(self, plate_length=0.04, plate_width=0.04, plate_thickness=0.01):
         self.PLATE_LENGTH = plate_length
         self.PLATE_WIDTH = plate_width
         self.PLATE_THICKNESS = plate_thickness
         
-        self.pillar_lf = np.array([0.015, -0.015, 0])  # left front
-        self.pillar_rf = np.array([0.015,  0.015, 0])  # right front
-        self.pillar_cr = np.array([-0.015, 0, 0])      # center rear
-        
-        self.start_time = None
-        # self.rolls = []
-        # self.pitches = []
-        # self.times = []
+        self.pillar_lf = np.array([-AttitudeController.CENTROID_DISTANCE*np.sin(np.pi/6), -AttitudeController.CENTROID_DISTANCE*np.cos(np.pi/6), 0])
+        self.pillar_rf = np.array([-AttitudeController.CENTROID_DISTANCE*np.sin(np.pi/6), AttitudeController.CENTROID_DISTANCE*np.cos(np.pi/6), 0])
+        self.pillar_cr = np.array([AttitudeController.CENTROID_DISTANCE, 0, 0])
     
     def calculate_plate_planes(self, roll, pitch):
         half_length = self.PLATE_LENGTH / 2.0
@@ -66,7 +63,7 @@ class AttitudeController:
     
     def calculate_pillars_point(self, roll, pitch):
         # Rotation matrices: roll about x-axis, pitch about y-axis
-        cr, sr = np.cos(-roll), np.sin(-roll)
+        cr, sr = np.cos(roll), np.sin(roll)
         cp, sp = np.cos(pitch), np.sin(pitch)
 
         R_x = np.array([[1, 0, 0],
@@ -86,3 +83,12 @@ class AttitudeController:
         pillar_cr_rotated = self.pillar_cr @ R.T
 
         return pillar_lf_rotated, pillar_rf_rotated, pillar_cr_rotated
+    
+    def calculate_arm_angle(self, roll, pitch):
+        pillar_lf_rotated, pillar_rf_rotated, pillar_cr_rotated = self.calculate_pillars_point(roll, pitch)
+        
+        self.servo_agl_lf = np.asin(pillar_lf_rotated[2] / AttitudeController.ARM_LENGTH)
+        self.servo_agl_rf = np.asin(pillar_rf_rotated[2] / AttitudeController.ARM_LENGTH)
+        self.servo_agl_cr = np.asin(pillar_cr_rotated[2] / AttitudeController.ARM_LENGTH)
+        
+        print(f"{np.rad2deg(self.servo_agl_lf):.2f}, {np.rad2deg(self.servo_agl_rf):.2f}, {np.rad2deg(self.servo_agl_cr):.2f}")

@@ -179,7 +179,7 @@ class RealTime3DViewerIOS(ui.View):
         # Create Poly3DCollection for the plate
         plate = None
         if np.abs(roll) > np.deg2rad(11) or np.abs(pitch) > np.deg2rad(11):
-            plate = Poly3DCollection(planes, facecolors='red', linewidths=1, edgecolors='r', alpha=0.5)
+            plate = Poly3DCollection(planes, facecolors='red', linewidths=1, edgecolors='r', alpha=0.2)
         else:
             plate = Poly3DCollection(planes, facecolors='cyan', linewidths=1, edgecolors='r', alpha=0.5)
         self.ax.add_collection3d(plate)

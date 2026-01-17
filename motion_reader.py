@@ -47,8 +47,8 @@ class MotionReader():
             self._mag_list.pop(0)
         
     def acc2euler(self, ax, ay, az):
-        roll = np.arctan2(-ay, -az)
-        pitch = np.arctan2(ax, np.sqrt(ay * ay + az * az))
+        roll = np.arctan2(ay, az)
+        pitch = np.arctan2(-ax, np.sqrt(ay**2 + az**2))
         return roll, pitch
     
     def loop(self):
