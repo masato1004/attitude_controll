@@ -34,8 +34,8 @@ class MotionReader():
             
     def read_gyro(self):
         gyro = motion.get_attitude()
-        self._gyro_roll, self._gyro_pitch, self._gyro_yaw = gyro
-        self._gyro_list.append(gyro)
+        self._gyro_pitch, self._gyro_roll, self._gyro_yaw = gyro
+        self._gyro_list.append([self._gyro_roll, self._gyro_pitch, self._gyro_yaw])
         if (len(self._gyro_list) > self.num_samples):
             self._gyro_list.pop(0)
             
@@ -47,8 +47,8 @@ class MotionReader():
             self._mag_list.pop(0)
         
     def acc2euler(self, ax, ay, az):
-        roll = np.arctan2(ay, az)
-        pitch = np.arctan2(-ax, np.sqrt(ay**2 + az**2))
+        roll = np.arctan2(-ay, -az)
+        pitch = np.arctan2(ax, np.sqrt(ay**2 + az**2))
         return roll, pitch
     
     def loop(self):

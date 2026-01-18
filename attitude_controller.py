@@ -1,16 +1,24 @@
 import numpy as np
+import time
 
 class AttitudeController:
     CENTROID_DISTANCE = 0.02  # distance from the vertex to the centroid
     ARM_LENGTH = 0.017
-    def __init__(self, plate_length=0.04, plate_width=0.04, plate_thickness=0.01):
+    def __init__(self, plate_length=0.04, plate_width=0.04, plate_thickness=0.01, control_cycle=0.02):
         self.PLATE_LENGTH = plate_length
         self.PLATE_WIDTH = plate_width
         self.PLATE_THICKNESS = plate_thickness
         
-        self.pillar_lf = np.array([-AttitudeController.CENTROID_DISTANCE*np.sin(np.pi/6), -AttitudeController.CENTROID_DISTANCE*np.cos(np.pi/6), 0])
-        self.pillar_rf = np.array([-AttitudeController.CENTROID_DISTANCE*np.sin(np.pi/6), AttitudeController.CENTROID_DISTANCE*np.cos(np.pi/6), 0])
-        self.pillar_cr = np.array([AttitudeController.CENTROID_DISTANCE, 0, 0])
+        self._status = True
+        self._control_cycle = control_cycle
+        
+        self.pillar_lr = np.array([-AttitudeController.CENTROID_DISTANCE*np.sin(np.pi/6), -AttitudeController.CENTROID_DISTANCE*np.cos(np.pi/6), 0])
+        self.pillar_rr = np.array([-AttitudeController.CENTROID_DISTANCE*np.sin(np.pi/6), AttitudeController.CENTROID_DISTANCE*np.cos(np.pi/6), 0])
+        self.pillar_cf = np.array([AttitudeController.CENTROID_DISTANCE, 0, 0])
+        
+        self.servo_agl_lr = 0
+        self.servo_agl_rr = 0
+        self.servo_agl_cf = 0
     
     def calculate_plate_planes(self, roll, pitch):
         half_length = self.PLATE_LENGTH / 2.0
@@ -78,17 +86,41 @@ class AttitudeController:
         R = R_y @ R_x
 
         # Rotate pillar points (row vectors), so multiply by R.T
-        pillar_lf_rotated = self.pillar_lf @ R.T
-        pillar_rf_rotated = self.pillar_rf @ R.T
-        pillar_cr_rotated = self.pillar_cr @ R.T
+        pillar_lr_rotated = self.pillar_lr @ R.T
+        pillar_rr_rotated = self.pillar_rr @ R.T
+        pillar_cf_rotated = self.pillar_cf @ R.T
 
-        return pillar_lf_rotated, pillar_rf_rotated, pillar_cr_rotated
+        return pillar_lr_rotated, pillar_rr_rotated, pillar_cf_rotated
     
-    def calculate_arm_angle(self, roll, pitch):
-        pillar_lf_rotated, pillar_rf_rotated, pillar_cr_rotated = self.calculate_pillars_point(roll, pitch)
+    def calculate_arm_angle(self, roll:float, pitch:float) -> list:
+        '''
+        Docstring of calculate_arm_angle
         
-        self.servo_agl_lf = np.asin(pillar_lf_rotated[2] / AttitudeController.ARM_LENGTH)
-        self.servo_agl_rf = np.asin(pillar_rf_rotated[2] / AttitudeController.ARM_LENGTH)
-        self.servo_agl_cr = np.asin(pillar_cr_rotated[2] / AttitudeController.ARM_LENGTH)
+        :param roll: [rad]
+        :param pitch: [rad]
         
-        print(f"{np.rad2deg(self.servo_agl_lf):.2f}, {np.rad2deg(self.servo_agl_rf):.2f}, {np.rad2deg(self.servo_agl_cr):.2f}")
+        ---
+        
+        :Output Description:
+        This returns backward calculated each servo angle [deg]
+        '''
+        pillar_lr_rotated, pillar_rr_rotated, pillar_cf_rotated = self.calculate_pillars_point(roll, pitch)
+        
+        self.servo_agl_lr = np.arcsin(pillar_lr_rotated[2] / AttitudeController.ARM_LENGTH)
+        self.servo_agl_rr = np.arcsin(pillar_rr_rotated[2] / AttitudeController.ARM_LENGTH)
+        self.servo_agl_cf = np.arcsin(pillar_cf_rotated[2] / AttitudeController.ARM_LENGTH)
+        
+        # print(f"{np.rad2deg(self.servo_agl_lr):.2f}, {np.rad2deg(self.servo_agl_rr):.2f}, {np.rad2deg(self.servo_agl_cf):.2f}")
+        # return self.servo_agl_lr, self.servo_agl_rr, self.servo_agl_cf
+    
+    @property
+    def target_angle_differential(self):
+        return self.servo_agl_lr, self.servo_agl_rr, self.servo_agl_cf
+    
+    def loop(self, reader):
+        while self._status:
+            time.sleep(self._control_cycle)
+            self.calculate_arm_angle(reader.roll, reader.pitch)
+    
+    def stop_controller(self):
+        self._status = False

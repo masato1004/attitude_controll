@@ -32,7 +32,7 @@ def main():
     
     # initial estimation
     acc = reader.acc
-    roll, pitch = reader.acc2euler(acc[1], -acc[0], acc[2])
+    roll, pitch = reader.acc2euler(acc[0], acc[1], acc[2])
     ekf.set_initial_state(roll, pitch)
     ekf.start_estimation()
     
@@ -40,22 +40,32 @@ def main():
     thread_ekf = threading.Thread(target=ekf.loop, args=(reader,), daemon=True)
     thread_ekf.start()
     
+    # controller loop threading
+    thread_controller = threading.Thread(target=att_ctrl.loop, args=(ekf,))
+    thread_controller.start()
+    
     # communicator instance
-    com = TcpCommunicator(ip="192.168.1.228", port=50001)
+    com = TcpCommunicator(ip="192.168.1.228", port=50001, data_num=2, seperator="_")
     com.connect()
+    thread_communicator = threading.Thread(target=com.loop_send, args=(ekf,))
+    thread_communicator.start()
     
     # print("Starting main loop...")
     
     sleep(1)
     
-    for i in range(200):
-        sleep(0.03)
+    for i in range(500):
+        sleep(0.02)
         now = time()
         
-        estimated_roll, estimated_pitch = ekf.get_estimated_angles()
-        controll_points = att_ctrl.calculate_pillars_point(estimated_roll, estimated_pitch)
+        # estimated_roll, estimated_pitch = ekf.estimated_angles
+        # controll_points = att_ctrl.calculate_pillars_point(estimated_roll, estimated_pitch)
+        # att_ctrl.calculate_arm_angle(ekf)
         
-        com.send(f"s{estimated_roll[0]}_{estimated_pitch[0]}")
+        # com.send(data=[estimated_roll, estimated_pitch], starts_with='s')
+        
+        if i % 2 == 0:
+            print(att_ctrl.target_angle_differential)
         
         # if i % 2 == 0:
         #     update = True
@@ -67,6 +77,7 @@ def main():
     
     reader.stop()
     ekf.stop_estimation()
+    att_ctrl.stop_controller()
     com.close()
     
     # plt.figure(figsize=(10, 5))

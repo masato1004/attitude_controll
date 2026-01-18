@@ -57,6 +57,7 @@ class ExtendedKalmanFilter():
         self.num_measurements_acc = 3
         self.status = False
         self.estimation_cycle = 0.01 # Added estimation_cycle attribute
+        self.estimation_cycle_reality = 0.012
         self._estimated_roll = 0.0
         self._estimated_pitch = 0.0
         
@@ -100,7 +101,8 @@ class ExtendedKalmanFilter():
         self._K = self.P @ self.J_c.T @ np.linalg.inv(self.J_c @ self.P @ self.J_c.T + self.R)
         return self._K
     
-    def A(self, dt=0.05):
+    @property
+    def A(self):
         # State transition Matrix
         _A = np.zeros([self.num_states, self.num_measurements_omega])
         _A[0, 0] = 1
@@ -120,7 +122,7 @@ class ExtendedKalmanFilter():
         return J
             
     def state_equation(self, omega, dt=0.05):
-        x_new = self.x.reshape(-1,1) + (self.A() @ omega * dt).reshape(-1,1)
+        x_new = self.x.reshape(-1,1) + (self.A @ omega * dt).reshape(-1,1)
         return x_new
         
     def predict_step(self, omega, dt=0.05):
@@ -153,9 +155,19 @@ class ExtendedKalmanFilter():
         self.status = True
         while self.status:
             sleep(self.estimation_cycle)
-            acc = reader.acc
-            omega = reader.omega
-            self._estimated_roll, self._estimated_pitch = self.smooth([-acc[1], -acc[0], acc[2]], omega, dt=self.estimation_cycle, observed=True)
+            # acc = reader.acc
+            # omega = reader.omega
+            self.smooth(reader.acc, reader.omega, dt=self.estimation_cycle_reality, observed=True)
+            self._estimated_roll, self._estimated_pitch = self.state_equation(omega=reader.omega, dt=self.estimation_cycle_reality)
+
+    @property
+    def estimated_angles(self):
+        return self._estimated_roll[0], self._estimated_pitch[0]
     
-    def get_estimated_angles(self):
-        return self._estimated_roll, self._estimated_pitch
+    @property
+    def roll(self):
+        return self._estimated_roll[0]
+    
+    @property
+    def pitch(self):
+        return self._estimated_pitch[0]
