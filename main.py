@@ -1,15 +1,15 @@
-from motion_reader import MotionReader
-from kalman_filter import ExtendedKalmanFilter as EKF
-# from viewer import AngleViewer
-from ios_viewer import RealTimeViewerIOS, RealTime3DViewerIOS
-from attitude_controller import AttitudeController as AttCtrl
+
+# from ios_viewer import RealTimeViewerIOS, RealTime3DViewerIOS
+# import ui
 from time import time, sleep
 import threading
-import numpy as np
-import matplotlib.pyplot as plt
-import ui
+# import numpy as np
+# import matplotlib.pyplot as plt
 
-from communicator import TcpCommunicator
+from attitude_controller import AttitudeController as ATC
+from motion_reader import MotionReader as MOR
+from kalman_filter import ExtendedKalmanFilter as EKF
+from communicator import TcpCommunicator as TCP
 
 def main():
     # realtime_viewer = RealTime3DViewerIOS(name='Real-Time EKF')
@@ -17,11 +17,11 @@ def main():
     
     
     # read motion
-    reader = MotionReader(sleep_time=0.01)
+    reader = MOR(sleep_time=0.01)
     reader.start()
     
     # attitude control instance
-    att_ctrl = AttCtrl()
+    att_ctrl = ATC()
     
     # kalman filter instance
     ekf = EKF()
@@ -45,7 +45,7 @@ def main():
     thread_controller.start()
     
     # communicator instance
-    com = TcpCommunicator(ip="192.168.1.228", port=50001, data_num=2, seperator="_")
+    com = TCP(ip="192.168.1.228", port=50001, data_num=2, seperator="_")
     com.connect()
     thread_communicator = threading.Thread(target=com.loop_send, args=(ekf,))
     thread_communicator.start()
@@ -56,7 +56,7 @@ def main():
     
     for i in range(500):
         sleep(0.02)
-        now = time()
+        # now = time()
         
         # estimated_roll, estimated_pitch = ekf.estimated_angles
         # controll_points = att_ctrl.calculate_pillars_point(estimated_roll, estimated_pitch)
