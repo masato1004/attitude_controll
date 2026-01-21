@@ -320,7 +320,60 @@ class RealTimeViewer:
         self.ax.autoscale_view()
         plt.pause(0.01)
         self.fig.canvas.draw_idle()  # Non-blocking draw
-        
+
+class RealTimePlotter2D:
+    def __init__(self, name='Real-Time Angles'):
+        self.rolls = []
+        self.pitches = []
+        self.times = []
+        self.start_time = None
+        self.name = name
+        plt.ion()  # Turn on interactive mode
+        self.fig, self.ax = plt.subplots(figsize=(10, 5))
+        self.line_roll, = self.ax.plot([], [], label=f'Roll (degrees) {self.name}', color='b')
+        self.line_pitch, = self.ax.plot([], [], label=f'Pitch (degrees) {self.name}', color='r')
+        self.ax.set_xlabel('Time (s)')
+        self.ax.set_ylabel(f'Angle by {self.name} (degrees)')
+        self.ax.set_title('Real-Time Roll and Pitch Angles')
+        self.ax.legend(loc='upper right')
+        self.ax.grid(True, color='gray', linestyle='--', linewidth=0.5)
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()
+
+    def add_data(self, roll, pitch, current_time, update=True):
+        if self.start_time is None:
+            self.start_time = current_time
+        self.rolls.append(roll)
+        self.pitches.append(pitch)
+        self.times.append(current_time - self.start_time)
+        if update:
+            self.update_plot(roll, pitch)
+
+    def update_plot(self, roll, pitch):
+        self.line_roll.set_data(self.times, np.degrees(self.rolls))
+        self.line_pitch.set_data(self.times, np.degrees(self.pitches))
+        self.ax.relim()
+        self.ax.autoscale_view()
+        self.fig.canvas.draw_idle()
+        plt.pause(0.03)
+
+    def plot_point(self, points):
+        pass
+
+    def draw_seat(self, roll, pitch):
+        pass
+
+    def close(self):
+        plt.ioff()
+        plt.close(self.fig)
+
+    def add_data_2d(self, roll, pitch, current_time):
+        self.add_data(roll, pitch, current_time)
+
+    def update_plot_2d(self):
+        self.update_plot(0, 0)
+
+
 if __name__ == "__main__":
     
     # def read():
@@ -345,7 +398,8 @@ if __name__ == "__main__":
     
     att_ctrl = AttCtrl()
     
-    rtv = RealTimeViewer()
+    rtv = RealTimePlotter2D()
+    # rtv = RealTimeViewer()
     time.sleep(1)
     roll, pitch = 0, 0
     
